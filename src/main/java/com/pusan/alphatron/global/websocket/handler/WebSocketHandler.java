@@ -16,6 +16,7 @@ import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 public class WebSocketHandler extends BinaryWebSocketHandler {
 
     private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+
     private WebSocketSession raspberrySession ;
     private WSClient flutterClient;
 
@@ -29,15 +30,13 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
         sessions.put(session.getId(), session);
         System.out.println("해당 세션 ID로 연결했습니다: " + session.getId());
 
-//
-//        if (raspberrySession == null) {
-            try {
-                flutterClient = new WSClient("ws://E_SERVER_URI");
-                flutterClient.connectBlocking();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-//        }
+//            try {
+//                flutterClient = new WSClient("ws://E_SERVER_URI");
+//                flutterClient.connectBlocking();
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+
 
         // H.264 파일을 쓰기 모드로 열기
         h264OutputStream = new FileOutputStream(H264_FILE_PATH);
@@ -48,9 +47,6 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
         sessions.remove(session.getId());
         System.out.println("해당 세션 ID는 종료되었스빈다.: " + session.getId());
 
-//        if (session == aClientSession) {
-//            aClientSession = null;
-//        }
 
         // H.264 파일 스트림 닫기
         if (h264OutputStream != null) {
@@ -63,31 +59,34 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, org.springframework.web.socket.TextMessage message) {
-        String payload = message.getPayload();
-
-//        if ("A_CLIENT_IDENTIFIER".equals(payload)) {
-//            aClientSession = session;
-//            System.out.println("A 클라이언트로 식별되었습니다.");
-//        }
-    }
-
-    @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
-//        if (session == aClientSession) {
+        System.out.println("이건진짜되야지 ㅇㅈ?");
             byte[] payload = message.getPayload().array();
+        System.out.println("이건출력되야지");
 
-            // H.264 데이터를 파일에 쓰기
-            if (h264OutputStream != null) {
-                h264OutputStream.write(payload);
+        // H.264 데이터를 파일에 쓰기 (필요 시)
+        if (h264OutputStream != null) {
+            h264OutputStream.write(payload);
+        }
+        System.out.println("보낼준비완료");
+        // 모든 연결된 클라이언트에게 바이너리 메시지 전송
+        for (WebSocketSession wsSession : sessions.values()) {
+            if (wsSession.isOpen()) {
+                try {
+                    System.out.println("이거출력되면 보내기직전");
+                    wsSession.sendMessage(new BinaryMessage(payload));
+                    System.out.println("이거출력되면 보낸거까지성공");
+                    System.out.println(new BinaryMessage(payload));
+                } catch (IOException e) {
+                    System.err.println("Failed to send message to session " + wsSession.getId() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
+        }
 
-            // E 클라이언트에게 전송
-            if (flutterClient != null && flutterClient.isOpen()) {
-                flutterClient.sendBinaryMessage(payload);
-            }
 
-            System.out.println("민재한테받아서 대영이한테 줌 ㅋ.");
+
+        System.out.println("민재한테받아서 대영이한테 줌 ㅋ.");
 //        }
     }
 
