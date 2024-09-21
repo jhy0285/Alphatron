@@ -1,5 +1,7 @@
 package com.pusan.alphatron.global.websocket.handler;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,6 +13,8 @@ import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
+
+import javax.imageio.ImageIO;
 
 @Component
 public class WebSocketHandler extends BinaryWebSocketHandler {
@@ -55,33 +59,27 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
 
-            byte[] payload = message.getPayload().array();
+        byte[] h264Data = message.getPayload().array();
 
+        // H.264 데이터 디코딩 및 프레임 추출 (FFmpeg 또는 JavaCV 라이브러리 필요)
+        // 예제에서는 BufferedImage로 디코딩된 데이터를 가정
 
-        // H.264 데이터를 파일에 쓰기 (필요 시)
-        if (h264OutputStream != null) {
-            h264OutputStream.write(payload);
-        }
-        System.out.println("보낼준비완료");
-        // 모든 연결된 클라이언트에게 바이너리 메시지 전송
+        BufferedImage image = decodeH264ToImage(h264Data);
+
+        // JPEG로 인코딩
+        ByteArrayOutputStream jpegOutputStream = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", jpegOutputStream);
+
+        // MJPEG 스트림을 위한 데이터 준비
+        byte[] jpegData = jpegOutputStream.toByteArray();
+        BinaryMessage jpegMessage = new BinaryMessage(jpegData);
+
+        // 모든 연결된 클라이언트에게 JPEG 데이터 전송
         for (WebSocketSession wsSession : sessions.values()) {
             if (wsSession.isOpen()) {
-                try {
-                    System.out.println("이거출력되면 보내기직전");
-                    wsSession.sendMessage(new BinaryMessage(payload));
-                    System.out.println("이거출력되면 보낸거까지성공");
-                    System.out.println(new BinaryMessage(payload));
-                } catch (IOException e) {
-                    System.err.println("Failed to send message to session " + wsSession.getId() + ": " + e.getMessage());
-                    e.printStackTrace();
-                }
+                wsSession.sendMessage(jpegMessage);
             }
         }
-
-
-
-        System.out.println("민재한테받아서 대영이한테 줌 ㅋ.");
-//        }
     }
 
     private void convertH264ToMp4(String inputH264Path, String outputMp4Path) {
