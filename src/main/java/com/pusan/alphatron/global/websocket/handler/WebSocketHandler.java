@@ -74,10 +74,18 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
         byte[] jpegData = jpegOutputStream.toByteArray();
         BinaryMessage jpegMessage = new BinaryMessage(jpegData);
 
+
+
         // 모든 연결된 클라이언트에게 JPEG 데이터 전송
         for (WebSocketSession wsSession : sessions.values()) {
             if (wsSession.isOpen()) {
-                wsSession.sendMessage(jpegMessage);
+                try{
+                    wsSession.sendMessage(jpegMessage);
+                }catch (IOException e) {
+                    System.err.println("Failed to send message to session " + wsSession.getId() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+
             }
         }
     }
