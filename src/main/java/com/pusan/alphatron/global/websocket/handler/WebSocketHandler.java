@@ -30,12 +30,6 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
         sessions.put(session.getId(), session);
         System.out.println("해당 세션 ID로 연결했습니다: " + session.getId());
 
-//            try {
-//                flutterClient = new WSClient("ws://E_SERVER_URI");
-//                flutterClient.connectBlocking();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
 
 
         // H.264 파일을 쓰기 모드로 열기
@@ -60,9 +54,9 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
 
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
-        System.out.println("이건진짜되야지 ㅇㅈ?");
+
             byte[] payload = message.getPayload().array();
-        System.out.println("이건출력되야지");
+
 
         // H.264 데이터를 파일에 쓰기 (필요 시)
         if (h264OutputStream != null) {
