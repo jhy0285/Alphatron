@@ -1,120 +1,155 @@
 package com.pusan.alphatron.global.websocket.handler;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import com.pusan.alphatron.global.websocket.client.WSClient;
+import java.nio.ByteBuffer;
+import java.util.concurrent.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
-import javax.imageio.ImageIO;
 
+@RequiredArgsConstructor
 @Component
 public class WebSocketHandler extends BinaryWebSocketHandler {
 
     private final ConcurrentMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+//    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);  // 스케줄러 추가
 
-    private WebSocketSession raspberrySession ;
-    private WSClient flutterClient;
 
-    private static final String H264_FILE_PATH = "received_video.h264";
-    private static final String MP4_FILE_PATH = "output_video.mp4";
 
-    private FileOutputStream h264OutputStream;
+    // 저장할 디렉토리 경로
+    private static final String IMAGE_SAVE_DIR = "images/";
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        System.out.println("afterConnectionEstablished: 시작");
         sessions.put(session.getId(), session);
         System.out.println("해당 세션 ID로 연결했습니다: " + session.getId());
+        System.out.println("Binary message buffer size: " + session.getBinaryMessageSizeLimit());
+        System.out.println("Text message buffer size: " + session.getTextMessageSizeLimit());
 
 
-
-        // H.264 파일을 쓰기 모드로 열기
-        h264OutputStream = new FileOutputStream(H264_FILE_PATH);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         sessions.remove(session.getId());
-        System.out.println("해당 세션 ID는 종료되었스빈다.: " + session.getId());
-
-
-        // H.264 파일 스트림 닫기
-        if (h264OutputStream != null) {
-            h264OutputStream.close();
-            h264OutputStream = null;
-
-            // H.264 파일을 MP4로 변환
-            convertH264ToMp4(H264_FILE_PATH, MP4_FILE_PATH);
-        }
+        System.out.println("해당 세션 ID는 종료되었습니다: " + session.getId());
+        System.out.println("afterConnectionClosed: 종료");
     }
-
     @Override
-    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
-
-        byte[] h264Data = message.getPayload().array();
-
-        // H.264 데이터 디코딩 및 프레임 추출 (FFmpeg 또는 JavaCV 라이브러리 필요)
-        // 예제에서는 BufferedImage로 디코딩된 데이터를 가정
-
-        BufferedImage image = decodeH264ToImage(h264Data);
-
-        // JPEG로 인코딩
-        ByteArrayOutputStream jpegOutputStream = new ByteArrayOutputStream();
-        ImageIO.write(image, "jpg", jpegOutputStream);
-
-        // MJPEG 스트림을 위한 데이터 준비
-        byte[] jpegData = jpegOutputStream.toByteArray();
-        BinaryMessage jpegMessage = new BinaryMessage(jpegData);
-
-
-
-        // 모든 연결된 클라이언트에게 JPEG 데이터 전송
-        for (WebSocketSession wsSession : sessions.values()) {
-            if (wsSession.isOpen()) {
-                try{
-                    wsSession.sendMessage(jpegMessage);
-                }catch (IOException e) {
-                    System.err.println("Failed to send message to session " + wsSession.getId() + ": " + e.getMessage());
-                    e.printStackTrace();
-                }
-
-            }
-        }
-    }
-
-    private void convertH264ToMp4(String inputH264Path, String outputMp4Path) {
+    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
         try {
-            String command = String.format("ffmpeg -i %s -c copy %s", inputH264Path, outputMp4Path);
-            Process process = Runtime.getRuntime().exec(command);
-
-            // 프로세스 출력 읽기
-            new Thread(() -> {
-                try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        System.out.println(line);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-
-            int exitCode = process.waitFor();
-            if (exitCode == 0) {
-                System.out.println("H.264 to MP4 conversion successful.");
-            } else {
-                System.err.println("H.264 to MP4 conversion failed.");
-            }
+            System.out.println("Binary message received from session: " + session.getId());
+            ByteBuffer payload = message.getPayload();
+            byte[] data = payload.array();
+            broadcastToAllSessions(data);
         } catch (Exception e) {
+            System.err.println("Error in handleBinaryMessage: " + e.getMessage());
             e.printStackTrace();
         }
     }
+
+
+
+
+
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
+
+    private void broadcastToAllSessions(byte[] data) {
+        BinaryMessage message = new BinaryMessage(data);
+        System.out.println("Broadcasting data to all sessions...");
+
+        for (WebSocketSession wsSession : sessions.values()) {
+            if (wsSession.isOpen()) {
+                executorService.submit(() -> {
+                    try {
+                        wsSession.sendMessage(message);
+                        System.out.println("Data sent to session ID: " + wsSession.getId());
+                    } catch (IOException e) {
+                        System.err.println("Failed to send data to session " + wsSession.getId() + ": " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                });
+            }
+        }
+
+        System.out.println("Broadcast complete.");
+    }
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    // 모든 세션에 메시지 브로드캐스트 메서드
+//    private void broadcastToAllSessions(byte[] jpgData) {
+//
+//        BinaryMessage jpgMessage=new BinaryMessage(jpgData);
+//        // 모든 세션에 메시지 전송
+//        System.out.println("Broadcasting JPEG to all sessions...");
+//        scheduler.scheduleAtFixedRate(() -> {
+//            for (WebSocketSession wsSession : sessions.values()) {
+//                if (wsSession.isOpen()) {
+//                    try {
+//                        wsSession.sendMessage(jpgMessage);
+//                        System.out.println("JPEG sent to session ID: " + wsSession.getId());
+//                    } catch (IOException e) {
+//                        System.err.println("Failed to send JPEG to session " + wsSession.getId() + ": " + e.getMessage());
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }, 0, 500, TimeUnit.MILLISECONDS);  // 500ms 간격으로 실행
+//
+//        System.out.println("Broadcast complete.");
+//    }
+
+
+
+
+//    // JPEG 파일 저장 메서드
+//    private String saveJpgFile(byte[] jpgData) {
+//        // 저장 디렉토리가 없을 경우 생성
+//        try {
+//            if (!Files.exists(Paths.get(IMAGE_SAVE_DIR))) {
+//                Files.createDirectories(Paths.get(IMAGE_SAVE_DIR));
+//            }
+//        } catch (IOException e) {
+//            System.err.println("Failed to create directory: " + IMAGE_SAVE_DIR);
+//            e.printStackTrace();
+//            return null;
+//        }
+//
+//        // 파일 이름을 현재 타임스탬프를 기준으로 생성
+//        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS").format(new Date());
+//        String fileName = "image_" + timestamp + ".jpg";
+//        String filePath = IMAGE_SAVE_DIR + fileName;
+//
+//        // 파일 저장
+//        try (FileOutputStream fileOutputStream = new FileOutputStream(filePath)) {
+//            fileOutputStream.write(jpgData);
+//            System.out.println("JPEG file saved: " + filePath);
+//            return filePath;
+//        } catch (IOException e) {
+//            System.err.println("Failed to save JPEG file: " + filePath);
+//            e.printStackTrace();
+//            return null;
+//        }
+//    }
