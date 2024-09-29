@@ -1,10 +1,12 @@
 package com.pusan.alphatron.global.config;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 @Configuration
 @EnableWebSocket
@@ -19,4 +21,27 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(webSocketHandler, "/test")
                 .setAllowedOrigins("*");
     }
+
+
+    // WebSocket 버퍼 크기 및 설정 조정
+    @Bean
+    public ServletServerContainerFactoryBean createWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        container.setMaxTextMessageBufferSize(5 * 1024 * 1024); // 5MB로 조정
+        container.setMaxBinaryMessageBufferSize(5 * 1024 * 1024); // 5MB로 조정
+        container.setMaxSessionIdleTimeout(600000L); // 세션 타임아웃 조정 (10분)
+        container.setAsyncSendTimeout(600000L); // 비동기 전송 타임아웃 설정 (10초)
+        return container;
+    }
+
+
+//    @Bean
+//    public WebSocketHandlerAdapter webSocketHandlerAdapter() {
+//        WebSocketHandlerAdapter handlerAdapter = new WebSocketHandlerAdapter();
+//        handlerAdapter.setMessageSizeLimit(5000000);  // 5MB로 제한
+//        return handlerAdapter;
+//    }
+
+
+
 }

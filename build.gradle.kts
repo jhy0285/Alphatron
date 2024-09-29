@@ -41,6 +41,10 @@ dependencies {
 	testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+	// JavaCPP FFmpeg Binding 추가
+	implementation("org.bytedeco:javacv:1.5.10")
+	implementation("org.bytedeco:ffmpeg-platform:6.1.1-1.5.10")
+
 }
 
 tasks.withType<Test> {

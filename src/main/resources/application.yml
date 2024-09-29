@@ -1,3 +1,11 @@
 
 server:
   port: 7777
+
+
+logging:
+  level:
+    org:
+      springframework:
+        web:
+          socket: DEBUG
