@@ -18,7 +18,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     //웹소켓핸들러 추가
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(webSocketHandler, "/test")
+        registry.addHandler(webSocketHandler, "/python")
+                .setAllowedOrigins("*");
+        registry.addHandler(webSocketHandler, "/flutter")
                 .setAllowedOrigins("*");
     }
 
@@ -27,20 +29,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Bean
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-        container.setMaxTextMessageBufferSize(5 * 1024 * 1024); // 5MB로 조정
-        container.setMaxBinaryMessageBufferSize(5 * 1024 * 1024); // 5MB로 조정
+        container.setMaxTextMessageBufferSize(50 * 1024 * 1024); // 5MB로 조정
+        container.setMaxBinaryMessageBufferSize(50 * 1024 * 1024); // 5MB로 조정
         container.setMaxSessionIdleTimeout(600000L); // 세션 타임아웃 조정 (10분)
-        container.setAsyncSendTimeout(600000L); // 비동기 전송 타임아웃 설정 (10초)
+        container.setAsyncSendTimeout(600000L); // 비동기 전송 타임아웃 설정 (10분)
         return container;
     }
 
-
-//    @Bean
-//    public WebSocketHandlerAdapter webSocketHandlerAdapter() {
-//        WebSocketHandlerAdapter handlerAdapter = new WebSocketHandlerAdapter();
-//        handlerAdapter.setMessageSizeLimit(5000000);  // 5MB로 제한
-//        return handlerAdapter;
-//    }
 
 
 
