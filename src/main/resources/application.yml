@@ -9,3 +9,4 @@ logging:
       springframework:
         web:
           socket: DEBUG
+
