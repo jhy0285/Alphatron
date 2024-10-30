@@ -73,7 +73,7 @@ public class WebSocketController {
             // 비디오 파일 생성
             File videoFile = convertImagesToVideo(outputVideoFileName);
 
-            // 비디오 파일을 H2 DB에 저장
+            // 비디오 파일을 DB에 저장
             videoService.saveVideoFile(outputVideoFileName, videoFile);
 
             // 비디오 변환 후 이미지 폴더 비우기

@@ -49,10 +49,6 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
 
 
 
-//        System.out.println("Binary message buffer size: " + session.getBinaryMessageSizeLimit());
-//        System.out.println("Text message buffer size: " + session.getTextMessageSizeLimit());
-
-
     }
 
     @Override
@@ -74,15 +70,7 @@ public class WebSocketHandler extends BinaryWebSocketHandler {
             // 중점 좌표 데이터(centroidLength 바이트) 읽기
             byte[] centroidBytes = new byte[centroidLength];
             buffer.get(centroidBytes);
-//            String centroidsJson = new String(centroidBytes);
 
-//            // JSON으로 변환
-//            ObjectMapper objectMapper = new ObjectMapper();
-//            Centroid[] centroids = objectMapper.readValue(centroidsJson, Centroid[].class);
-//            System.out.println("Received centroids: ");
-//            for (Centroid centroid : centroids) {
-//                System.out.println(centroid);
-//            }
 
             // 이미지 프레임의 크기(4바이트)를 읽습니다.
             int frameLength = buffer.getInt();
